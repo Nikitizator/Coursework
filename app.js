@@ -1,4 +1,3 @@
-// app.js
 const container = document.getElementById('map-container');
 let isInitialLoad = true;
 
@@ -18,7 +17,7 @@ const mapWidthOnSite = 1200;  // Ширина карты на сайте
 const figmaFrameWidth = 5357; // Исходная ширина фрейма в Figma
 const k = mapWidthOnSite / figmaFrameWidth; // Коэффициент пересчета
 
-// Ограничение перемещения карты (динамически подстраивается под размеры картинки)
+// Ограничение перемещения карты
 stage.dragBoundFunc(function(pos) {
     const scale = stage.scaleX();
     
@@ -38,7 +37,7 @@ stage.dragBoundFunc(function(pos) {
     };
 });
 
-// Функция отрисовки кабинетов (данные берутся из config.js)
+// Функция отрисовки кабинетов
 function drawRooms(floorNumber, targetGroup) {
     const rooms = roomsData[floorNumber] || [];
 
@@ -71,11 +70,11 @@ function drawRooms(floorNumber, targetGroup) {
             layer.draw();
         });
 
-        // Клик по кабинету — открывает модальное окно справа сверху (БЕЗ ALERT)
+        // Клик по кабинету открывает модальное окно
         roomShape.on('click tap', (e) => {
-            e.cancelBubble = true; // Предотвращаем подергивание карты
+            e.cancelBubble = true;
             
-            // Наполняем модалку данными из config.js
+            // Модальное окно с данными из config
             document.getElementById('modal-title').innerText = data.name;
             document.getElementById('modal-desc').innerText = data.desc;
             
@@ -110,7 +109,7 @@ function loadFloor(floorNumber) {
         drawRooms(floorNumber, currentFloorGroup);
         layer.add(currentFloorGroup);
         
-        // Центрируем карту ТОЛЬКО ОДИН РАЗ при самом первом открытии сайта
+        // Центрировка карты
         if (isInitialLoad) {
             const currentScale = stage.scaleX();
             const centerX = (stage.width() - mapWidthOnSite * currentScale) / 2;
