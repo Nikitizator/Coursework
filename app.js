@@ -1,7 +1,8 @@
+// app.js
 const container = document.getElementById('map-container');
-let isInitialLoad = true;
+let isInitialLoad = true; // Оставляем ТОЛЬКО ОДИН раз
 
-// Инициализация сцены Konva
+// Инициализация холста Konva
 const stage = new Konva.Stage({
     container: 'map-container',
     width: container.offsetWidth,
@@ -37,44 +38,71 @@ stage.dragBoundFunc(function(pos) {
     };
 });
 
-// Функция отрисовки кабинетов
+// Функция отрисовки кабинетов (данные берутся из config.js)
 function drawRooms(floorNumber, targetGroup) {
     const rooms = roomsData[floorNumber] || [];
 
     rooms.forEach(data => {
         let roomShape;
 
+        // 1. Прямоугольники
         if (data.type === "rect") {
             roomShape = new Konva.Rect({
                 x: data.x * k,
                 y: data.y * k,
                 width: data.w * k,
                 height: data.h * k,
-                fill: 'rgba(0, 123, 255, 0.0)', // Прозрачный по умолчанию
+                fill: 'rgba(0, 123, 255, 0.0)',
+                stroke: '#007bff',
+                strokeWidth: 0,
+                cursor: 'pointer'
+            });
+        } 
+        // 2. Многоугольники (Г-образные кабинеты, скошенные углы)
+        else if (data.type === "polygon") {
+            roomShape = new Konva.Line({
+                // Умножаем каждую точку на коэффициент k
+                points: data.points.map(point => point * k),
+                closed: true, // Обязательно замыкаем линию, чтобы получилась залитая фигура
+                fill: 'rgba(0, 123, 255, 0.0)',
+                stroke: '#007bff',
+                strokeWidth: 0,
+                cursor: 'pointer'
+            });
+        }
+        // 3. Круглые объекты
+        else if (data.type === "circle") {
+            roomShape = new Konva.Circle({
+                x: data.x * k,
+                y: data.y * k,
+                radius: data.r * k,
+                fill: 'rgba(0, 123, 255, 0.0)',
                 stroke: '#007bff',
                 strokeWidth: 0,
                 cursor: 'pointer'
             });
         }
 
-        // Эффекты при наведении мыши (ХОВЕРЫ ВОЗВРАЩЕНЫ)
+        if (!roomShape) return;
+
+        // Эффекты при наведении мыши
         roomShape.on('mouseenter', () => {
-            roomShape.fill('rgba(0, 123, 255, 0.3)'); // Полупрозрачный синий цвет
-            roomShape.strokeWidth(2); // Появляется обводка
+            roomShape.fill('rgba(0, 123, 255, 0.3)');
+            roomShape.strokeWidth(2);
             layer.draw();
         });
 
         roomShape.on('mouseleave', () => {
-            roomShape.fill('rgba(0, 123, 255, 0.0)'); // Снова прозрачный
+            roomShape.fill('rgba(0, 123, 255, 0.0)');
             roomShape.strokeWidth(0);
             layer.draw();
         });
 
-        // Клик по кабинету открывает модальное окно
+        // Клик по кабинету — открывает модальное окно справа сверху
         roomShape.on('click tap', (e) => {
-            e.cancelBubble = true;
+            e.cancelBubble = true; // Предотвращаем подергивание карты
             
-            // Модальное окно с данными из config
+            // Наполняем модалку данными из config.js
             document.getElementById('modal-title').innerText = data.name;
             document.getElementById('modal-desc').innerText = data.desc;
             
@@ -109,14 +137,14 @@ function loadFloor(floorNumber) {
         drawRooms(floorNumber, currentFloorGroup);
         layer.add(currentFloorGroup);
         
-        // Центрировка карты
+        // ЧЕТКАЯ ПРОВЕРКА: Центрируем карту ТОЛЬКО ОДИН РАЗ при самом первом открытии сайта
         if (isInitialLoad) {
             const currentScale = stage.scaleX();
             const centerX = (stage.width() - mapWidthOnSite * currentScale) / 2;
             const centerY = (stage.height() - calculatedHeight * currentScale) / 2;
 
             stage.position({ x: centerX, y: centerY });
-            isInitialLoad = false; // Выключаем флаг
+            isInitialLoad = false; // Выключаем флаг навсегда, чтобы при кликах карта не прыгала
         }
 
         layer.batchDraw();
@@ -126,6 +154,7 @@ function loadFloor(floorNumber) {
 // Обработка кликов по кнопкам этажей
 document.querySelectorAll('.floor-button').forEach(button => {
     button.addEventListener('click', (e) => {
+        // Защита: прерываем, если кнопка уже активна
         if (e.target.classList.contains('active')) return;
 
         document.querySelector('.floor-button.active').classList.remove('active');
