@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Интерактивная карта здания</title>
+    <script src="https://unpkg.com/konva@9.3.15/konva.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; background: #f3f3f4; }
+        .header { padding: 15px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        /* Кнопки этажей, как на скриншоте */
+        .floor-buttons { display: flex; gap: 10px; padding: 15px; }
+        .floor-button {
+            padding: 10px 20px; border: 1px solid #ccc; background: #fff;
+            cursor: pointer; border-radius: 4px; font-weight: bold;
+        }
+        .floor-button.active { background: #007bff; color: #fff; border-color: #0056b3; }
+        
+        /* Контейнер для карты */
+        #map-container {
+            width: 100vw;
+            height: calc(100vh - 130px); /* Высота экрана минус шапка и кнопки */
+            overflow: hidden;
+            cursor: grab;
+        }
+        #map-container:active { cursor: grabbing; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Карта корпуса (Vanilla JS + Konva)</h2>
+    </div>
+
+    <div class="floor-buttons">
+        <button class="floor-button" data-floor="1">1</button>
+        <button class="floor-button active" data-floor="2">2</button>
+        <button class="floor-button" data-floor="3">3</button>
+    </div>
+
+    <div id="map-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
