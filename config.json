@@ -1,5 +1,0 @@
-const floorPlans = {
-    "1": "floor1.png", // Файл лежит прямо в папке с проектом
-    "2": "floor2.png",
-    "3": "floor3.png"
-};
