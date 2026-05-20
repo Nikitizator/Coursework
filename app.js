@@ -1,173 +1,141 @@
+// app.js
 const container = document.getElementById('map-container');
+let isInitialLoad = true;
+
+// Инициализация сцены Konva
 const stage = new Konva.Stage({
     container: 'map-container',
     width: container.offsetWidth,
     height: container.offsetHeight,
-    draggable: true // Разрешаем перетаскивать карту мышкой
+    draggable: true
 });
 
 const layer = new Konva.Layer();
 stage.add(layer);
 
 let currentFloorGroup = null;
+const mapWidthOnSite = 1200;  // Ширина карты на сайте
+const figmaFrameWidth = 5357; // Исходная ширина фрейма в Figma
+const k = mapWidthOnSite / figmaFrameWidth; // Коэффициент пересчета
 
-// ==========================================
-// 1. ПУТИ К КАРТИНКАМ (Экспорт из Figma в PNG)
-// ==========================================
-const floorPlans = {
-    "1": "floor1.png", // Файлы должны лежать в папке с index.html
-    "2": "floor2.png",
-    "3": "floor3.png"
-};
+// Ограничение перемещения карты (динамически подстраивается под размеры картинки)
+stage.dragBoundFunc(function(pos) {
+    const scale = stage.scaleX();
+    
+    // Ищем на холсте загруженное изображение этажа
+    const currentImg = stage.find('Image')[0];
+    const currentImgHeight = currentImg ? currentImg.height() : mapWidthOnSite * 0.75;
+    
+    // Вычисляем границы с запасом в 300 пикселей
+    const minX = stage.width() - mapWidthOnSite * scale - 300;
+    const maxX = 300;
+    const minY = stage.height() - currentImgHeight * scale - 300;
+    const maxY = 300;
 
-// ==========================================
-// 2. БАЗА ДАННЫХ КООРДИНАТ КАБИНЕТОВ ИЗ FIGMA
-// ==========================================
-// Сюда ты вносишь X, Y, W, H, которые скопировал из Figma
-const roomsData = {
-    "1": [
-        { id: "101", name: "Приемная комиссия", type: "rect", x: 4595, y: 3020, w: 287, h: 407 },
-        { id: "102", name: "Гардероб", type: "rect", x: 4595, y: 3020, w: 287, h: 407 }
-    ],
-    "2": [
-        { id: "201", name: "Кафедра Информационных Технологий", type: "rect", x: 150, y: 220, w: 110, h: 80 },
-        { id: "202", name: "Компьютерный класс №1", type: "rect", x: 280, y: 220, w: 140, h: 80 }
-    ],
-    "3": [
-        { id: "301", name: "Деканат", type: "rect", x: 400, y: 180, w: 100, h: 70 }
-    ]
-};
+    return {
+        x: Math.max(Math.min(maxX, pos.x), minX),
+        y: Math.max(Math.min(maxY, pos.y), minY)
+    };
+});
 
-// ==========================================
-// 3. ФУНКЦИЯ ОТРИСОВКИ КЛИКАБЕЛЬНЫХ ОБЛАСТЕЙ
-// ==========================================
+// Функция отрисовки кабинетов (данные берутся из config.js)
 function drawRooms(floorNumber, targetGroup) {
     const rooms = roomsData[floorNumber] || [];
 
     rooms.forEach(data => {
         let roomShape;
 
-        // Общие настройки стиля зон кабинетов
-        const shapeConfig = {
-            id: data.id,
-            fill: 'rgba(0, 123, 255, 0.0)', // По умолчанию невидимы (прозрачны)
-            stroke: '#007bff',              // Синий цвет рамки при наведении
-            strokeWidth: 0,                 // Прячем рамку по умолчанию
-            cursor: 'pointer'
-        };
-
-        // Если кабинет прямоугольный
         if (data.type === "rect") {
             roomShape = new Konva.Rect({
-                ...shapeConfig,
-                x: data.x,
-                y: data.y,
-                width: data.w,
-                height: data.h
-            });
-        } 
-        // Если кабинет сложной формы (полигон)
-        else if (data.type === "poly") {
-            roomShape = new Konva.Line({
-                ...shapeConfig,
-                points: data.points,
-                closed: true
+                x: data.x * k,
+                y: data.y * k,
+                width: data.w * k,
+                height: data.h * k,
+                fill: 'rgba(0, 123, 255, 0.0)', // Прозрачный по умолчанию
+                stroke: '#007bff',
+                strokeWidth: 0,
+                cursor: 'pointer'
             });
         }
 
-        // --- ИНТЕРАКТИВНЫЕ СОБЫТИЯ ---
-
-        // Эффект при наведении (Подсветка кабинета)
+        // Эффекты при наведении мыши (ХОВЕРЫ ВОЗВРАЩЕНЫ)
         roomShape.on('mouseenter', () => {
-            roomShape.fill('rgba(0, 123, 255, 0.25)'); // Проявляем полупрозрачный синий тон
-            roomShape.strokeWidth(2);                  // Показываем контур комнаты
-            layer.draw();                              // Мгновенно обновляем холст
-        });
-
-        // Эффект, когда уводим курсор с кабинета
-        roomShape.on('mouseleave', () => {
-            roomShape.fill('rgba(0, 123, 255, 0.0)');  // Снова делаем прозрачным
-            roomShape.strokeWidth(0);                  // Скрываем контур
+            roomShape.fill('rgba(0, 123, 255, 0.3)'); // Полупрозрачный синий цвет
+            roomShape.strokeWidth(2); // Появляется обводка
             layer.draw();
         });
 
-        // Клик по кабинету
-        roomShape.on('click', (e) => {
-            e.cancelBubble = true; // Запрещаем карте двигаться при клике на кабинет
-            
-            // Выводим информацию (в будущем здесь можно сделать красивое модальное окно)
-            alert(`Аудитория: ${data.id}\nНазначение: ${data.name}`);
+        roomShape.on('mouseleave', () => {
+            roomShape.fill('rgba(0, 123, 255, 0.0)'); // Снова прозрачный
+            roomShape.strokeWidth(0);
+            layer.draw();
         });
 
-        // Добавляем созданную фигуру на слой этажа
+        // Клик по кабинету — открывает модальное окно справа сверху (БЕЗ ALERT)
+        roomShape.on('click tap', (e) => {
+            e.cancelBubble = true; // Предотвращаем подергивание карты
+            
+            // Наполняем модалку данными из config.js
+            document.getElementById('modal-title').innerText = data.name;
+            document.getElementById('modal-desc').innerText = data.desc;
+            
+            // Показываем окно
+            document.getElementById('room-modal').style.display = 'block';
+        });
+
         targetGroup.add(roomShape);
     });
 }
 
-// ==========================================
-// 4. ЗАГРУЗКА ЭТАЖА И ПОДЛОЖКИ FIGMA
-// ==========================================
+// Функция загрузки этажа
 function loadFloor(floorNumber) {
-    if (currentFloorGroup) {
-        currentFloorGroup.destroy(); // Стираем старый этаж перед загрузкой нового
-    }
-
+    if (currentFloorGroup) currentFloorGroup.destroy();
     currentFloorGroup = new Konva.Group();
 
     const imageObj = new Image();
-    imageObj.src = floorPlans[floorNumber];
+    imageObj.src = `floor${floorNumber}.png`;
 
     imageObj.onload = function() {
-        // Создаем изображение подложки карты
+        const calculatedHeight = mapWidthOnSite * (imageObj.height / imageObj.width);
+
         const kImage = new Konva.Image({
             x: 0,
             y: 0,
             image: imageObj,
-            width: 1200, // Жестко фиксируем ширину под Figma-координаты
-            height: 1200 * (imageObj.height / imageObj.width) // Пропорциональная высота
+            width: mapWidthOnSite,
+            height: calculatedHeight
         });
 
-        // Добавляем картинку в группу этажа
         currentFloorGroup.add(kImage);
-
-        // Запускаем отрисовку кликабельных зон поверх картинки
         drawRooms(floorNumber, currentFloorGroup);
-
-        // Пушим всю группу на рабочий слой холста
         layer.add(currentFloorGroup);
         
-        // Центрируем карту на экране пользователя при смене этажа
-        stage.position({
-            x: (stage.width() - kImage.width() * stage.scaleX()) / 2,
-            y: (stage.height() - kImage.height() * stage.scaleY()) / 2
-        });
-        
-        layer.draw();
-    };
+        // Центрируем карту ТОЛЬКО ОДИН РАЗ при самом первом открытии сайта
+        if (isInitialLoad) {
+            const currentScale = stage.scaleX();
+            const centerX = (stage.width() - mapWidthOnSite * currentScale) / 2;
+            const centerY = (stage.height() - calculatedHeight * currentScale) / 2;
 
-    imageObj.onerror = function() {
-        console.error(`Ошибка загрузки: не найден файл ${floorPlans[floorNumber]}`);
+            stage.position({ x: centerX, y: centerY });
+            isInitialLoad = false; // Выключаем флаг
+        }
+
+        layer.batchDraw();
     };
 }
 
-// ==========================================
-// 5. УПРАВЛЕНИЕ КНОПКАМИ ЭТАЖЕЙ
-// ==========================================
+// Обработка кликов по кнопкам этажей
 document.querySelectorAll('.floor-button').forEach(button => {
     button.addEventListener('click', (e) => {
-        const activeBtn = document.querySelector('.floor-button.active');
-        if (activeBtn) activeBtn.classList.remove('active');
+        if (e.target.classList.contains('active')) return;
+
+        document.querySelector('.floor-button.active').classList.remove('active');
         e.target.classList.add('active');
-        
-        const floor = e.target.getAttribute('data-floor');
-        loadFloor(floor);
+        loadFloor(e.target.getAttribute('data-floor'));
     });
 });
 
-// ==========================================
-// 6. УПРАВЛЕНИЕ ЗУМОМ (КОЛЕСИКО МЫШИ)
-// ==========================================
-const scaleBy = 1.1;
+// Умный зум колесиком мыши
 stage.on('wheel', (e) => {
     e.evt.preventDefault();
     const oldScale = stage.scaleX();
@@ -178,86 +146,34 @@ stage.on('wheel', (e) => {
         y: (pointer.y - stage.y()) / oldScale,
     };
 
-    let newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
-    if (newScale < 0.1) newScale = 0.1; // Ограничение отдаления
-    if (newScale > 8) newScale = 8;     // Ограничение приближения
+    let newScale = e.evt.deltaY < 0 ? oldScale * 1.1 : oldScale / 1.1;
+    newScale = Math.max(0.15, Math.min(6, newScale));
 
     stage.scale({ x: newScale, y: newScale });
-
-    const newPos = {
+    stage.position({
         x: pointer.x - mousePointTo.x * newScale,
         y: pointer.y - mousePointTo.y * newScale,
-    };
-    stage.position(newPos);
+    });
     layer.draw();
 });
 
-// Включаем 2-й этаж по умолчанию при старте
-loadFloor("2");
-
-// Подгоняем холст под размеры экрана при ресайзе браузера
 window.addEventListener('resize', () => {
     stage.width(container.offsetWidth);
     stage.height(container.offsetHeight);
     layer.draw();
 });
-function drawRooms(floorNumber, targetGroup) {
-    const rooms = roomsData[floorNumber] || [];
 
-    // Указываем точную ширину твоего фрейма из Figma
-    const figmaFrameWidth = 5357; 
-    
-    // Вычисляем коэффициент масштаба (на сколько нужно уменьшить координаты)
-    const k = 1200 / figmaFrameWidth; 
+// Стартуем с 1 этажа
+loadFloor("1");
 
-    rooms.forEach(data => {
-        let roomShape;
+// Закрытие модального окна при клике на крестик
+document.getElementById('modal-close').addEventListener('click', () => {
+    document.getElementById('room-modal').style.display = 'none';
+});
 
-        const shapeConfig = {
-            id: data.id,
-            fill: 'rgba(0, 123, 255, 0.0)', // Прозрачный, пока не навели мышь
-            stroke: '#007bff',              // Цвет контура при наведении
-            strokeWidth: 0,                 // Контур скрыт по умолчанию
-            cursor: 'pointer'
-        };
-
-        if (data.type === "rect") {
-            // Автоматически пересчитываем огромные координаты Figma под наш сайт
-            roomShape = new Konva.Rect({
-                ...shapeConfig,
-                x: data.x * k,
-                y: data.y * k,
-                width: data.w * k,
-                height: data.h * k
-            });
-        } else if (data.type === "poly") {
-            // Если будут полигоны, пересчитываем каждую точку в массиве
-            const scaledPoints = data.points.map(p => p * k);
-            roomShape = new Konva.Line({
-                ...shapeConfig,
-                points: scaledPoints,
-                closed: true
-            });
-        }
-
-        // Эффекты мыши
-        roomShape.on('mouseenter', () => {
-            roomShape.fill('rgba(0, 123, 255, 0.3)'); // Мягкая синяя подсветка
-            roomShape.strokeWidth(2);                 // Показываем рамку кабинета
-            layer.draw();                             // Перерисовываем холст
-        });
-
-        roomShape.on('mouseleave', () => {
-            roomShape.fill('rgba(0, 123, 255, 0.0)');  
-            roomShape.strokeWidth(0);                  
-            layer.draw();
-        });
-
-        roomShape.on('click', (e) => {
-            e.cancelBubble = true; 
-            alert(`Аудитория: ${data.id}\nНазначение: ${data.name}`);
-        });
-
-        targetGroup.add(roomShape);
+// Дополнительно: скрывать окно, если переключаем этаж
+document.querySelectorAll('.floor-button').forEach(button => {
+    button.addEventListener('click', () => {
+        document.getElementById('room-modal').style.display = 'none';
     });
-}
+});
