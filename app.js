@@ -1,6 +1,6 @@
 // app.js
 const container = document.getElementById('map-container');
-let isInitialLoad = true; // Оставляем ТОЛЬКО ОДИН раз
+let isInitialLoad = true;
 
 // Инициализация холста Konva
 const stage = new Konva.Stage({
@@ -144,7 +144,7 @@ function loadFloor(floorNumber) {
             const centerY = (stage.height() - calculatedHeight * currentScale) / 2;
 
             stage.position({ x: centerX, y: centerY });
-            isInitialLoad = false; // Выключаем флаг навсегда, чтобы при кликах карта не прыгала
+            isInitialLoad = false;
         }
 
         layer.batchDraw();
@@ -154,7 +154,6 @@ function loadFloor(floorNumber) {
 // Обработка кликов по кнопкам этажей
 document.querySelectorAll('.floor-button').forEach(button => {
     button.addEventListener('click', (e) => {
-        // Защита: прерываем, если кнопка уже активна
         if (e.target.classList.contains('active')) return;
 
         document.querySelector('.floor-button.active').classList.remove('active');
@@ -163,7 +162,7 @@ document.querySelectorAll('.floor-button').forEach(button => {
     });
 });
 
-// Умный зум колесиком мыши
+// Зум колесиком мыши
 stage.on('wheel', (e) => {
     e.evt.preventDefault();
     const oldScale = stage.scaleX();
@@ -199,7 +198,7 @@ document.getElementById('modal-close').addEventListener('click', () => {
     document.getElementById('room-modal').style.display = 'none';
 });
 
-// Дополнительно: скрывать окно, если переключаем этаж
+// Скрывать окно, если переключаем этаж
 document.querySelectorAll('.floor-button').forEach(button => {
     button.addEventListener('click', () => {
         document.getElementById('room-modal').style.display = 'none';
