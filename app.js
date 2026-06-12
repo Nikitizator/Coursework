@@ -28,9 +28,9 @@ stage.dragBoundFunc(function(pos) {
     
     // Вычисляем границы с запасом в 300 пикселей
     const minX = stage.width() - mapWidthOnSite * scale - 300;
-    const maxX = 300;
+    const maxX = 600;
     const minY = stage.height() - currentImgHeight * scale - 300;
-    const maxY = 300;
+    const maxY = 600;
 
     return {
         x: Math.max(Math.min(maxX, pos.x), minX),
