@@ -15,9 +15,12 @@ stage.add(layer);
 
 let currentFloorGroup = null;
 const mapWidthOnSite = 1200;  // Ширина карты на сайте
-const figmaFrameWidth = 5357; // Исходная ширина фрейма в Figma
-const k = mapWidthOnSite / figmaFrameWidth; // Коэффициент пересчета
-
+const figmaFrameWidths = {
+    1: 5357,
+    2: 1063,
+    3: 1063,
+    4: 1063
+}; // ширина карт в figma
 // Ограничение перемещения карты
 stage.dragBoundFunc(function(pos) {
     const scale = stage.scaleX();
@@ -41,7 +44,10 @@ stage.dragBoundFunc(function(pos) {
 // Функция отрисовки кабинетов (данные берутся из config.js)
 function drawRooms(floorNumber, targetGroup) {
     const rooms = roomsData[floorNumber] || [];
-
+    
+    const figmaFrameWidth = figmaFrameWidths[floorNumber];
+    const k = mapWidthOnSite / figmaFrameWidth;
+    
     rooms.forEach(data => {
         let roomShape;
 
