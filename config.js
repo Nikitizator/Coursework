@@ -366,7 +366,7 @@ const roomsData = {
         },
         { 
             name: "208 Кабинет", 
-            desc: "", 
+            desc: "мы тут", 
             type: "rect", 
             x: 0, 
             y: 2353, 
