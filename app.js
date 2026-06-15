@@ -2,7 +2,7 @@
 const container = document.getElementById('map-container');
 let isInitialLoad = true;
 
-// Инициализация холста Konva
+// настройка холста Konva
 const stage = new Konva.Stage({
     container: 'map-container',
     width: container.offsetWidth,
@@ -10,29 +10,29 @@ const stage = new Konva.Stage({
     draggable: true
 });
 
-const layer = new Konva.Layer();
+const layer = new Konva.Layer(); // создаем холст
 stage.add(layer);
 
 let currentFloorGroup = null;
-const mapWidthOnSite = 1200;  // Ширина карты на сайте
+const mapWidthOnSite = 1200;  // ширина карты на сайте
 const figmaFrameWidths = {
     1: 5357,
     2: 1063,
     3: 1063,
     4: 1063
 }; // ширина карт в figma
-// Ограничение перемещения карты
+// ограничение перемещения карты
 stage.dragBoundFunc(function(pos) {
     const scale = stage.scaleX();
     
-    // Ищем на холсте загруженное изображение этажа
+    // загрузка фото на холст
     const currentImg = stage.find('Image')[0];
     const currentImgHeight = currentImg ? currentImg.height() : mapWidthOnSite * 0.75;
     
-    // Вычисляем границы с запасом в 300 пикселей
-    const minX = stage.width() - mapWidthOnSite * scale - 300;
+    // границы с запасом
+    const minX = stage.width() - mapWidthOnSite * scale - 600;
     const maxX = 600;
-    const minY = stage.height() - currentImgHeight * scale - 300;
+    const minY = stage.height() - currentImgHeight * scale - 600;
     const maxY = 600;
 
     return {
@@ -41,7 +41,7 @@ stage.dragBoundFunc(function(pos) {
     };
 });
 
-// Функция отрисовки кабинетов (данные берутся из config.js)
+// отрисовка кабинетов на холсте
 function drawRooms(floorNumber, targetGroup) {
     const rooms = roomsData[floorNumber] || [];
     
@@ -51,7 +51,7 @@ function drawRooms(floorNumber, targetGroup) {
     rooms.forEach(data => {
         let roomShape;
 
-        // 1. Прямоугольники
+        // 1. прямоугольники
         if (data.type === "rect") {
             roomShape = new Konva.Rect({
                 x: data.x * k,
@@ -64,7 +64,7 @@ function drawRooms(floorNumber, targetGroup) {
                 cursor: 'pointer'
             });
         } 
-        // 2. Многоугольники (Г-образные кабинеты, скошенные углы)
+        // 2. многоугольники (Г-образные кабинеты и тд.)
         else if (data.type === "polygon") {
             roomShape = new Konva.Line({
                 // Умножаем каждую точку на коэффициент k
@@ -76,7 +76,7 @@ function drawRooms(floorNumber, targetGroup) {
                 cursor: 'pointer'
             });
         }
-        // 3. Круглые объекты
+        // 3. круги
         else if (data.type === "circle") {
             roomShape = new Konva.Circle({
                 x: data.x * k,
@@ -91,24 +91,24 @@ function drawRooms(floorNumber, targetGroup) {
 
         if (!roomShape) return;
 
-        // Эффекты при наведении мыши
+        // эффекты при наведении
         roomShape.on('mouseenter', () => {
             roomShape.fill('rgba(0, 123, 255, 0.3)');
             roomShape.strokeWidth(2);
             layer.draw();
         });
-
+        // эффект при уберании
         roomShape.on('mouseleave', () => {
             roomShape.fill('rgba(0, 123, 255, 0.0)');
             roomShape.strokeWidth(0);
             layer.draw();
         });
 
-        // Клик по кабинету — открывает модальное окно справа сверху
+        // логика клика
         roomShape.on('click tap', (e) => {
-            e.cancelBubble = true; // Предотвращаем подергивание карты
+            e.cancelBubble = true;
             
-            // Наполняем модалку данными из config.js
+            // наполнение модальки данными
             document.getElementById('modal-title').innerText = data.name;
             document.getElementById('modal-desc').innerText = data.desc;
             
@@ -120,7 +120,7 @@ function drawRooms(floorNumber, targetGroup) {
     });
 }
 
-// Функция загрузки этажа
+// загрузка этажа
 function loadFloor(floorNumber) {
     if (currentFloorGroup) currentFloorGroup.destroy();
     currentFloorGroup = new Konva.Group();
@@ -143,7 +143,6 @@ function loadFloor(floorNumber) {
         drawRooms(floorNumber, currentFloorGroup);
         layer.add(currentFloorGroup);
         
-        // ЧЕТКАЯ ПРОВЕРКА: Центрируем карту ТОЛЬКО ОДИН РАЗ при самом первом открытии сайта
         if (isInitialLoad) {
             const currentScale = stage.scaleX();
             const centerX = (stage.width() - mapWidthOnSite * currentScale) / 2;
@@ -157,7 +156,7 @@ function loadFloor(floorNumber) {
     };
 }
 
-// Обработка кликов по кнопкам этажей
+// обработка кликов по кнопкам этажей
 document.querySelectorAll('.floor-button').forEach(button => {
     button.addEventListener('click', (e) => {
         if (e.target.classList.contains('active')) return;
@@ -168,7 +167,7 @@ document.querySelectorAll('.floor-button').forEach(button => {
     });
 });
 
-// Зум колесиком мыши
+// зум
 stage.on('wheel', (e) => {
     e.evt.preventDefault();
     const oldScale = stage.scaleX();
@@ -196,15 +195,15 @@ window.addEventListener('resize', () => {
     layer.draw();
 });
 
-// Стартуем с 1 этажа
+// Старт
 loadFloor("1");
 
-// Закрытие модального окна при клике на крестик
+// закрытие окна при клике на крестик
 document.getElementById('modal-close').addEventListener('click', () => {
     document.getElementById('room-modal').style.display = 'none';
 });
 
-// Скрывать окно, если переключаем этаж
+// скрывание окна при переключении этажа
 document.querySelectorAll('.floor-button').forEach(button => {
     button.addEventListener('click', () => {
         document.getElementById('room-modal').style.display = 'none';
